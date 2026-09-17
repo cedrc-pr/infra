@@ -1,0 +1,38 @@
+- name: Debian traefik tasks
+  ansible.builtin.include_tasks: debian.yml
+  when: ansible_facts.os_family == "Debian"
+
+- name: Fedora traefik tasks
+  ansible.builtin.include_tasks: fedora.yml
+  when: ansible_facts.os_family == "RedHat"
+
+- name: create traefik folder
+  ansible.builtin.file:
+    path: /services/traefik/
+    state: directory
+
+- name: copy traefik conf
+  ansible.builtin.copy:
+    src: traefik/
+    dest: /services/traefik/
+
+- name: copy traefik.yml
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: /services/traefik/traefik.yml
+
+- name: copy deployer router & service
+  ansible.builtin.template:
+    src: deployer.yml.j2
+    dest: /services/traefik/config/deployer.yml
+
+- name: acme permission
+  ansible.builtin.file:
+    path: /services/traefik/acme.json
+    state: file
+    mode: "0600"
+
+- name: start traefik
+  community.docker.docker_compose_v2:
+    project_src: /services/traefik/
+    state: present

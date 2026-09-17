@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+APP_DIR="{{ app_dir }}"
+ENV_FILE="$APP_DIR/.env"
+LOG_FILE="$APP_DIR/deploy.log"
+info() { echo -e "info: $1"; }
+error() { echo -e "error: $1"; }
+
+set -euo pipefail
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+echo "----- DEPLOY -----"
+
+NEW_VERSION="${1:?Usage: $0 <version>}"
+cd "$APP_DIR"
+if [[ ! -f "$ENV_FILE" ]]; then
+    PREVIOUS_VERSION="$(
+        docker inspect \
+            --format='{% raw %}{{ with index .Config.Labels "org.opencontainers.image.previous-revision" }}{{ . }}{{ else }}no-previous{{ end }}{% endraw %}' \
+            "{{ image }}"
+    )"
+    if [[ -z "$PREVIOUS_VERSION" || "$PREVIOUS_VERSION" == "0000000000000000000000000000000000000000" ]]; then
+        PREVIOUS_VERSION="no-previous"
+    fi
+    echo "VERSION=$PREVIOUS_VERSION" > "$ENV_FILE"
+    info ".env created with previous version: $PREVIOUS_VERSION"
+fi
+
+CURRENT_VERSION=$(grep "^VERSION=" "$ENV_FILE" | cut -d= -f2)
+ALREADY_ROLLEDBACK=false
+
+info "current version: $CURRENT_VERSION"
+info "new version:     $NEW_VERSION"
+
+if [[ "$NEW_VERSION" == "$CURRENT_VERSION" ]]; then
+    info "nothing to do"
+    exit 0
+fi
+
+cp "$ENV_FILE" "$ENV_FILE.backup"
+sed -i "s/VERSION=.*/VERSION=$NEW_VERSION/" "$ENV_FILE"
+
+rollback() {
+    if [[ $ALREADY_ROLLEDBACK == "true" ]]; then
+        error "Rolling back to current version $CURRENT_VERSION failed, human intervention needed"
+        exit 1
+    fi
+    ALREADY_ROLLEDBACK=true
+    info "Rolling back to current version $CURRENT_VERSION"
+    mv "$ENV_FILE.backup" "$ENV_FILE"
+    deploy
+}
+
+deploy() {
+    info "pulling images"
+    docker compose pull || rollback
+    info "starting"
+    docker compose up -d || rollback
+    check_health || rollback
+}
+
+check_health() {
+    SERVICES=$(docker compose ps -q)
+    readarray -t SERVICE_LIST <<< "$SERVICES"
+    TIMEOUT=60
+    INTERVAL=5
+    ELAPSED=0
+    info "checking services health"
+    while [[ ELAPSED -le TIMEOUT ]]; do
+	STATUS_LIST=()
+        OUTPUT=()
+        for ID in "${SERVICE_LIST[@]}"; do
+	    STATUS="$(docker inspect --format '{% raw %}{{if .State.Health}}{{.State.Health.Status}}{{else}}no healthcheck{{end}}{% endraw %}' $ID)"
+            STATUS_LIST+=("$STATUS")
+            OUTPUT+=("$(docker inspect --format \
+            '{% raw %}{{ index .Config.Labels "com.docker.compose.service" }}{% endraw %}' $ID): $STATUS | ")
+        done
+        info "${OUTPUT[*]}"
+        ALL_HEALTHY=true
+        for STATUS in "${STATUS_LIST[@]}"; do
+            if [[ "$STATUS"  != "healthy" && "$STATUS" != "no healthcheck" ]]; then
+                ALL_HEALTHY=false
+	        break
+            fi
+        done
+	if [[ "$ALL_HEALTHY" == "true" ]]; then
+	    return 0
+	fi
+	sleep "$INTERVAL"
+	ELAPSED=$((ELAPSED + INTERVAL))
+    done
+    error "${TIMEOUT}s timeout"
+    return 1
+}
+
+deploy
+

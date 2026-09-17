@@ -1,0 +1,79 @@
+# fedora
+- name: install docker
+  ansible.builtin.dnf:
+    name:
+      - moby-engine
+      - docker-cli
+      - containerd
+      - docker-compose
+    state: present
+    update_cache: true
+  when: ansible_facts.os_family == "RedHat"
+
+# debian
+- name: install Docker
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose
+    state: present
+    update_cache: true
+  when: ansible_facts.os_family == "Debian"
+
+
+# common
+- name: enable docker
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: create deployer group
+  ansible.builtin.group:
+    name: deployer
+    state: present
+
+- name: create deployer user
+  ansible.builtin.user:
+    name: deployer
+    group: deployer
+    create_home: true
+    shell: /bin/bash
+    state: present
+
+- name: add deployer to docker group
+  ansible.builtin.user:
+    name: deployer
+    groups:
+      - docker
+    append: true
+
+- name: Install ACL support
+  become: true
+  ansible.builtin.apt:
+    name: acl
+    state: present
+  when: ansible_facts.os_family == "Debian"
+
+- name: login to ghcr
+  become: true
+  become_user: deployer
+  community.docker.docker_login:
+    registry_url: ghcr.io
+    username: "{{ ghcr_username }}"
+    password: "{{ ghcr_token }}"
+
+- name: create docker proxy network
+  community.docker.docker_network:
+    name: proxy
+    driver: bridge
+    state: present
+    ipam_config:
+      - subnet: "{{ deployer_subnet }}"
+        gateway: "{{ deployer_bind_ip }}"
+
+- name: create services folder
+  ansible.builtin.file:
+    path: /services
+    state: directory
+

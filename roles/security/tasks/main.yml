@@ -1,0 +1,13 @@
+- name: Debian security tasks
+  ansible.builtin.include_tasks: debian.yml
+  when: ansible_facts.os_family == "Debian"
+
+- name: Fedora security tasks
+  ansible.builtin.include_tasks: fedora.yml
+  when: ansible_facts.os_family == "RedHat"
+
+- name: define sshd config
+  ansible.builtin.copy:
+    src: ./files/sshd_config
+    dest: /etc/ssh/sshd_config
+  notify: restart ssh

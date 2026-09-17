@@ -1,0 +1,60 @@
+- name: install dnf-automatic
+  ansible.builtin.dnf:
+    name: dnf5-plugin-automatic
+    state: present
+    update_cache: true
+
+- name: upgrade security packages
+  ansible.builtin.lineinfile:
+    path: /etc/dnf/automatic.conf
+    regexp: "^upgrade_type ="
+    line: "upgrade_type = security"
+    create: true
+
+- name: upgrade security packages automatically
+  ansible.builtin.lineinfile:
+    path: /etc/dnf/automatic.conf
+    regexp: "^apply_updates ="
+    line: "apply_updates = yes"
+    create: true
+
+- name: start security packages upgrade daemon
+  ansible.builtin.systemd:
+    name: dnf5-automatic.timer
+    enabled: true
+    state: started
+
+- name: install firewalld
+  ansible.builtin.dnf:
+    name: firewalld
+    state: present
+    update_cache: true
+
+- name: enable and start firewalld
+  ansible.builtin.systemd:
+    name: firewalld
+    enabled: true
+    state: started
+
+- name: allow ssh
+  ansible.posix.firewalld:
+    service: ssh
+    zone: public
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: install fail2ban
+  ansible.builtin.dnf:
+    name:
+      - fail2ban
+      - fail2ban-firewalld
+    state: present
+    update_cache: true
+
+- name: enable fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started
+

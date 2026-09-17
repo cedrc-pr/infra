@@ -1,0 +1,9 @@
+- name: secures server and deploy app
+  become: true
+  hosts: all
+  roles:
+    - security
+    - environment
+    - traefik
+    - copit
+    - deployer

@@ -1,0 +1,76 @@
+networks:
+  proxy:
+    name: proxy
+    external: true
+  backend:
+    internal: true
+
+services:
+
+  fe:
+    image: "ghcr.io/{{ ghcr_username }}/copit-fe:${VERSION}"
+    depends_on:
+      be:
+        condition: service_healthy
+    networks:
+      - proxy
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.copit.rule=Host(`copit.{{ domain }}`)"
+      - "traefik.http.routers.copit.entrypoints=websecure"
+      - "traefik.http.routers.copit.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.copit.middlewares=secure-headers@file"
+
+  be:
+    security_opt:
+      - label=disable
+    image: "ghcr.io/{{ ghcr_username }}/copit-be:${VERSION}"
+    env_file:
+      - be/.env
+    networks:
+      - backend
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 5s
+
+  db:
+    image: postgres:alpine
+    security_opt:
+      - label=disable
+    volumes:
+      - ./be/postgres/:/docker-entrypoint-initdb.d
+    env_file:
+      - be/.env
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+

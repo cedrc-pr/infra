@@ -1,0 +1,8 @@
+domain: "domain.com"
+acme_email: "me@company.com"
+
+deployer_conf: []
+deployer_bind_ip: "172.30.0.1"
+deployer_bind_port: "3000"
+deployer_subnet: "172.30.0.0/24"
+deployer_conf_path: "/etc/deployer/deployer.conf"

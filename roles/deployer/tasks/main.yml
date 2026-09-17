@@ -1,0 +1,60 @@
+# deploy all apps
+- name: set deployer ownership
+  ansible.builtin.file:
+    path: "{{ item.split(';')[1] | dirname }}"
+    owner: deployer
+    group: deployer
+    recurse: true
+  loop: "{{ deployer_conf }}"
+
+- name: deploy copit
+  become: true
+  become_user: deployer
+  ansible.builtin.command:
+    cmd: /services/copit/deploy.sh {{ copit_current_sha.stdout }}
+  register: deploy_result
+  changed_when: "'nothing to do' not in deploy_result.stdout"
+
+# prepare deployer
+- name: create copit folder
+  ansible.builtin.file:
+    path: /etc/deployer/
+    state: directory
+
+- name: create deployer unit file systemd
+  ansible.builtin.copy:
+    src: deployer.service
+    dest: /etc/systemd/system/deployer.service
+
+- name: create deployer env
+  ansible.builtin.template:
+    src: .env.j2
+    dest: /etc/deployer/.env
+
+- name: generate deployer config
+  ansible.builtin.copy:
+    dest: "{{ deployer_conf_path }}"
+    content: "{{ deployer_conf | join('\n') }}\n"
+
+- name: get latest deployer release
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ ghcr_username }}/deployer/releases/latest"
+    return_content: true
+    headers:
+      Accept: "application/vnd.github+json"
+  register: deployer_release
+
+- name: download deployer binary
+  ansible.builtin.get_url:
+    url: "{{ (deployer_release.json.assets | selectattr('name', 'equalto', 'deployer') | first).browser_download_url }}"
+    dest: /usr/local/bin/deployer
+    mode: "0755"
+    checksum: "{{ (deployer_release.json.assets | selectattr('name', 'equalto', 'deployer') | first).digest }}"
+
+- name: start deployer
+  ansible.builtin.systemd_service:
+    name: deployer.service
+    state: started
+    enabled: true
+    daemon_reload: true
+

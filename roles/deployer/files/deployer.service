@@ -1,0 +1,22 @@
+[Unit]
+Description=Script execution API
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=simple
+
+User=deployer
+Group=deployer
+SupplementaryGroups=docker
+
+ExecStart=/usr/local/bin/deployer
+
+Restart=on-failure
+RestartSec=5
+
+EnvironmentFile=-/etc/deployer/.env
+
+[Install]
+WantedBy=multi-user.target
+

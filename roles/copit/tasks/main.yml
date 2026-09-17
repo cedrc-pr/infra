@@ -1,0 +1,48 @@
+- name: create copit folder
+  ansible.builtin.file:
+    path: /services/copit/
+    state: directory
+
+- name: copy files
+  ansible.builtin.copy:
+    src: copit/
+    dest: /services/copit/
+
+- name: generate be/.env
+  ansible.builtin.template:
+    src: .env.j2
+    dest: /services/copit/be/.env
+
+- name: create docker-compose
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /services/copit/docker-compose.yml
+
+- name: add copit deploy script
+  ansible.builtin.set_fact:
+    deployer_conf: >-
+      {{ deployer_conf + ['copit;/services/copit/deploy.sh;' ~ copit_deploy_token] }}
+
+- name: copy script
+  ansible.builtin.template:
+    src: deploy.sh.j2
+    dest: /services/copit/deploy.sh
+    mode: '0755'
+  vars:
+    app_dir: "/services/copit/"
+    image: "ghcr.io/{{ ghcr_username }}/{{ copit_image }}:latest"
+
+- name: pull latest image
+  become: true
+  become_user: deployer
+  community.docker.docker_image_pull:
+    name: "ghcr.io/{{ ghcr_username}}/{{ copit_image }}:latest"
+
+- name: get current image sha
+  ansible.builtin.shell: >
+    docker inspect
+    --format='{% raw %}{{ index .Config.Labels "org.opencontainers.image.revision" }}{% endraw %}'
+    ghcr.io/{{ ghcr_username }}/{{ copit_image }}:latest
+  register: copit_current_sha
+  changed_when: false
+

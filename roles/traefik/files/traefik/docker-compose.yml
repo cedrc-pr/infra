@@ -1,0 +1,23 @@
+networks:
+  proxy:
+    name: proxy
+    external: true
+
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:v3
+    restart: unless-stopped
+    networks:
+      - proxy
+    security_opt:
+      - no-new-privileges:true
+      - label=disable
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/traefik.yml:ro
+      - ./acme.json:/acme.json
+      - ./config/:/config:ro

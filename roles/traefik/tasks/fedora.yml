@@ -1,0 +1,15 @@
+- name: allow http
+  ansible.builtin.firewalld:
+    service: http
+    zone: public
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: allow https
+  ansible.builtin.firewalld:
+    service: https
+    zone: public
+    permanent: true
+    immediate: true
+    state: enabled

@@ -1,0 +1,26 @@
+http:
+  routers:
+    deployer:
+      rule: "Host(`deployer.{{ domain }}`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - secure-headers
+        - deployer-rate-limit
+      service: deployer-svc
+
+  middlewares:
+    deployer-rate-limit:
+      rateLimit:
+        average: 1
+        period: 1s
+        burst: 1
+
+  services:
+    deployer-svc:
+      loadBalancer:
+        servers:
+          - url: "http://{{ deployer_bind_ip }}:{{ deployer_bind_port }}"
+

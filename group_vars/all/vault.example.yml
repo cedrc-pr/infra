@@ -1,0 +1,18 @@
+# ghcr credentials
+ghcr_username: "USERNAME"
+ghcr_token: "abc"
+
+# copit
+copit_deploy_token: "abc"
+copit_image: "copit-be"
+
+copit_env: "prod"
+
+copit_postgres_host: "db"
+copit_postgres_port: 5432
+copit_postgres_db: "copit"
+copit_postgres_user: "copit"
+copit_postgres_password: "abc"
+
+copit_database_url: "postgres://copit:abc@db/copit"
+copit_redis_url: "redis://redis/"
