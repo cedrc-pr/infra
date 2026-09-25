@@ -1,5 +1,5 @@
-domain: "domain.com"
-acme_email: "me@company.com"
+domain: "cedric-prin.dev"
+acme_email: "cedric.prin@free.fr"
 
 deployer_conf: []
 deployer_bind_ip: "172.30.0.1"

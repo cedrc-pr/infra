@@ -47,9 +47,9 @@ It contains various roles:
 # Deployment
 
 ```shell
-mv inventory.example.ini inventory.ini
-mv host_vars.example/ host_vars/
-mv group_vars/all/vault.example.yml group_vars/all/vault.yml
+cp inventory.example.ini inventory.ini
+cp host_vars.example/ host_vars/
+cp group_vars/all/vault.example.yml group_vars/all/vault.yml
 
 ansible-vault encrypt group_vars/all/vault.yml host_vars/SERVER-A/vault.yml host_vars/SERVER-B/vault.yml
 ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass

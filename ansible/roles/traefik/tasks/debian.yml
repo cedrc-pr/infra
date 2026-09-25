@@ -10,13 +10,25 @@
     port: "443"
     proto: tcp
 
-- name: allow docker proxy network to access deployer
-  become: true
-  community.general.ufw:
-    rule: allow
-    from_ip: 172.30.0.0/24
-    to_port: "3000"
-    proto: tcp
+# - name: allow docker proxy network to access deployer
+#   become: true
+#   community.general.ufw:
+#     rule: allow
+#     from_ip: 172.30.0.0/24
+#     to_port: "3000"
+#     proto: tcp
+
+- name: allow deployer from docker network
+  ansible.builtin.iptables:
+    chain: INPUT
+    source: 172.30.0.0/24
+    destination: 172.30.0.1
+    protocol: tcp
+    destination_port: "3000"
+    jump: ACCEPT
+    action: insert
+    rule_num: 1
+    state: present
 
 - name: Install CrowdSec Traefik collection
   ansible.builtin.command:

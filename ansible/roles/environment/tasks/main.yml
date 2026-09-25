@@ -1,5 +1,5 @@
 # fedora
-- name: install docker
+- name: install docker on fedora
   ansible.builtin.dnf:
     name:
       - moby-engine
@@ -11,15 +11,24 @@
   when: ansible_facts.os_family == "RedHat"
 
 # debian
-- name: install Docker
+- name: install docker on debian
   ansible.builtin.apt:
     name:
       - docker.io
       - docker-compose
     state: present
     update_cache: true
-  when: ansible_facts.os_family == "Debian"
-
+  when: ansible_facts.distribution == "Debian"
+  
+# ubuntu
+- name: install docker on ubuntu
+  ansible.builtin.apt:
+    name:
+      - docker.io
+      - docker-compose-v2
+    state: present
+    update_cache: true
+  when: ansible_facts.distribution == "Ubuntu"
 
 # common
 - name: enable docker

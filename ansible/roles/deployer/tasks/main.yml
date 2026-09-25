@@ -44,12 +44,31 @@
       Accept: "application/vnd.github+json"
   register: deployer_release
 
+- name: Set deployer architecture
+  ansible.builtin.set_fact:
+    deployer_arch: >-
+      {{
+        {
+          'x86_64': 'amd64',
+          'aarch64': 'arm64'
+        }[ansible_facts["architecture"]]
+      }}
+
+- name: Find deployer asset
+  ansible.builtin.set_fact:
+    deployer_asset: >-
+      {{
+        deployer_release.json.assets
+        | selectattr('name', 'equalto', 'deployer-linux-' ~ deployer_arch)
+        | first
+      }}
+
 - name: download deployer binary
   ansible.builtin.get_url:
-    url: "{{ (deployer_release.json.assets | selectattr('name', 'equalto', 'deployer') | first).browser_download_url }}"
+    url: "{{ deployer_asset.browser_download_url }}"
     dest: /usr/local/bin/deployer
     mode: "0755"
-    checksum: "{{ (deployer_release.json.assets | selectattr('name', 'equalto', 'deployer') | first).digest }}"
+    checksum: "{{ deployer_asset.digest }}"
 
 - name: start deployer
   ansible.builtin.systemd_service:
