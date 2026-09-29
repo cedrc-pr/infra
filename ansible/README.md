@@ -1,9 +1,7 @@
 # Overview
 
-This project is an Ansible playbook that can fully configure servers and deploy everything required for my [Copit](https://github.com/cedrc-pr/copit) application (but can accept multiple apps).
-It works on debian 13 trixie and on fedora 44 servers.
-
-I have made this project to continue discovering DevOps just after the [python projects](https://github.com/cedrc-pr/python-projects).
+This folder is an Ansible playbook that can fully configure servers and deploy everything required for my [Copit](https://github.com/cedrc-pr/copit) application (but can accept multiple apps).
+It works on debian 13 trixie (ubuntu also) and on fedora 44 servers.
 
 It contains various roles:
 
@@ -29,7 +27,7 @@ It contains various roles:
   - binding in a docker subnet
   - dynamic configuration
 
-# Workflow
+# CI/CD Workflow arround it
 
 - push on main in copit repository:
   - build images
@@ -46,15 +44,6 @@ It contains various roles:
 
 # Deployment
 
-```shell
-cp inventory.example.ini inventory.ini
-cp host_vars.example/ host_vars/
-cp group_vars/all/vault.example.yml group_vars/all/vault.yml
-
-ansible-vault encrypt group_vars/all/vault.yml host_vars/SERVER-A/vault.yml host_vars/SERVER-B/vault.yml
-ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass
-```
-
 On fedora servers, no need to do much, the account used to connect with ansible must be able to connect with the public key.
 
 For debian, if you have chose a minimal configuration (only SSH server and standard system utilities), you will need to:
@@ -63,6 +52,18 @@ For debian, if you have chose a minimal configuration (only SSH server and stand
 su -
 apt udpate && apt install -y sudo curl
 usermod -aG sudo USERNAME
+```
+
+Then, you can run:
+
+```shell
+cp inventory.example.ini inventory.ini
+cp host_vars.example/ host_vars/
+cp group_vars/all/vault.example.yml group_vars/all/vault.yml
+# change the vars in it to yours
+
+ansible-vault encrypt group_vars/all/vault.yml host_vars/SERVER-A/vault.yml host_vars/SERVER-B/vault.yml
+ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass
 ```
 
 # If you made it this far
