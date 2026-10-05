@@ -49,5 +49,3 @@ cp terraform.example.tfvars terraform.tfvars
 
 terraform apply
 ```
-
-SSH access is intended to be restricted further once private network access through Tailscale is configured.
